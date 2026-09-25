@@ -1,0 +1,37 @@
+cat << 'EOF' > .gitignore
+# Entornos virtuales
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Variables de entorno y secretos
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Bytecode y cache de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Editores y sistema operativo
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Dependencias y compilados locales
+build/
+dist/
+*.egg-info/
+EOF
