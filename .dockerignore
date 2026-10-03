@@ -1,0 +1,44 @@
+cat << 'EOF' > .dockerignore
+# Control de versiones
+.git
+.gitignore
+
+# Entornos virtuales locales
+venv/
+.venv/
+env/
+
+# Archivos de entorno y credenciales
+.env
+.env.*
+*.pem
+*.key
+
+# Bytecode y caché de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Configuración de editores e IDEs
+.vscode/
+.idea/
+.cursor/
+*.swp
+*.swo
+.DS_Store
+
+# Documentación y pruebas locales
+tests/
+*.md
+!README.md
+
+# Archivos de construcción y logs
+build/
+dist/
+*.egg-info/
+*.log
+EOF

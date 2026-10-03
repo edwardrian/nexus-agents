@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Any
 
 from app.api.v1.sse import agent_event_generator
-from app.agent.graph import agent_app
+from app.agent.graph import get_agent_app
 
 router = APIRouter(prefix="/chat", tags=["Chat & Agents"])
 
@@ -39,7 +39,7 @@ async def get_session_history(session_id: str):
     para un session_id determinado.
     """
     config = {"configurable": {"thread_id": session_id}}
-    state = agent_app.get_state(config)
+    state = get_agent_app().get_state(config)
     
     if not state or not state.values:
         return {"session_id": session_id, "messages": []}

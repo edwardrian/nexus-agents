@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nexus_agents_api
+    restart: unless-stopped
+    depends_on:
+      - ollama
+    ports:
+      - "8000:8000" # Ajusta al puerto donde corre tu FastAPI/Uvicorn
+    env_file:
+      - .env
+    environment:
+      # Apunta al nombre del servicio en Compose, no a localhost:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=llama3.2:latest
+
+volumes:
+  ollama_models:

@@ -1,8 +1,20 @@
+from contextlib import asynccontextmanager
+from app.db.checkpoint import init_db, close_db
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import router as chat_router
 from app.core.config import settings
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Se ejecuta al iniciar la aplicación (con el event loop ya activo)
+    await init_db()
+    yield
+    # Se ejecuta al apagar la aplicación
+    await close_db()
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -10,6 +22,7 @@ app = FastAPI(
     docs_url=None,       # Desactiva Swagger UI (/docs)
     redoc_url=None,      # Desactiva ReDoc (/redoc)
     openapi_url=None,    # Desactiva el endpoint del schema JSON (/openapi.json)
+    lifespan=lifespan,
 )
 
 # Configuración de CORS

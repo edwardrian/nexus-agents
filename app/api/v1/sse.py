@@ -2,7 +2,7 @@ import json
 import traceback
 from typing import AsyncGenerator
 from langchain_core.messages import HumanMessage
-from app.agent.graph import agent_app
+from app.agent.graph import get_agent_app
 
 
 async def agent_event_generator(prompt: str, thread_id: str) -> AsyncGenerator[str, None]:
@@ -13,8 +13,11 @@ async def agent_event_generator(prompt: str, thread_id: str) -> AsyncGenerator[s
     input_data = {"messages": [HumanMessage(content=prompt)]}
 
     try:
+        agent_app = get_agent_app()
         async for event in agent_app.astream_events(input_data, config=config, version="v2"):
             kind = event.get("event")
+
+            print(kind)
 
             # Emisión de tokens de texto generados por el LLM
             if kind == "on_chat_model_stream":

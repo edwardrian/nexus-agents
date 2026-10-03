@@ -1,5 +1,8 @@
+from typing import Optional
+
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
+from langgraph.graph.state import CompiledStateGraph
 
 from app.agent.state import AgentState
 from app.services.llm_factory import get_llm
@@ -47,5 +50,11 @@ workflow.add_conditional_edges("agent", should_continue, {
 workflow.add_edge("tools", "agent")  # Luego de ejecutar la tool, vuelve al agente para que responda
 
 # 6. Compilar el grafo con el checkpointer de Supabase
-checkpointer = get_checkpointer()
-agent_app = workflow.compile(checkpointer=checkpointer)
+_agent_app: Optional[CompiledStateGraph] = None
+
+def get_agent_app() -> CompiledStateGraph:
+    global _agent_app
+    if _agent_app is None:
+        checkpointer = get_checkpointer()
+        _agent_app = workflow.compile(checkpointer=checkpointer)
+    return _agent_app

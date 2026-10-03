@@ -9,8 +9,6 @@ venv.bak/
 
 # Variables de entorno y secretos
 .env
-.env.local
-.env.*.local
 *.pem
 *.key
 
@@ -34,4 +32,4 @@ __pycache__/
 build/
 dist/
 *.egg-info/
-EOF
+EOF.env
