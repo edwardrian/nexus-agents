@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "nexus-agents"
 
     # Proveedor de LLM ("gemini", "bedrock", "ollama")
-    LLM_PROVIDER: str = "gemini"
+    LLM_PROVIDER: str = "ollama"
 
     # Google Gemini
     GEMINI_API_KEY: Optional[str] = None
