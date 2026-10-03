@@ -1,55 +1,32 @@
+from datetime import date
 from typing import Optional
 
+from langchain_core.messages import SystemMessage
 from langgraph.graph import StateGraph, END
-from langgraph.prebuilt import ToolNode
 from langgraph.graph.state import CompiledStateGraph
 
+from app.agent.prompts import SYSTEM_PROMPT
 from app.agent.state import AgentState
 from app.services.llm_factory import get_llm
 from app.db.checkpoint import get_checkpointer
 
-# 1. Definir o importar las herramientas (tools) que el agente puede usar
-# Por ahora creamos una de ejemplo directamente aquí:
-from langchain_core.tools import tool
+# 1. Inicializar el LLM (Ollama, Gemini o Bedrock según tu factory)
+llm = get_llm()
 
-@tool
-def get_system_status(service_name: str) -> str:
-    """Consulta el estado operativo de un servicio."""
-    return f"Servicio '{service_name}': OPERATIVO, CPU al 24%, 0 errores."
-
-tools = [get_system_status]
-
-# 2. Inicializar el LLM (Ollama, Gemini o Bedrock según tu factory) y asociarle las tools
-llm = get_llm().bind_tools(tools)
-
-# 3. Definir el nodo del agente (el que piensa y decide)
+# 2. Definir el nodo del agente (el que responde)
 async def call_model(state: AgentState):
-    response = await llm.ainvoke(state["messages"])
+    # El system prompt no se guarda en el historial: se antepone en cada llamada
+    system = SystemMessage(content=SYSTEM_PROMPT.format(today=date.today().isoformat()))
+    response = await llm.ainvoke([system, *state["messages"]])
     return {"messages": [response]}
 
-# 4. Función condicional: ¿el modelo generó respuesta o pidió ejecutar una tool?
-def should_continue(state: AgentState):
-    last_message = state["messages"][-1]
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        return "tools"
-    return END
-
-# 5. Armar el StateGraph
+# 3. Armar el StateGraph: un solo nodo que responde y termina
 workflow = StateGraph(AgentState)
-
-# Agregar los nodos
 workflow.add_node("agent", call_model)
-workflow.add_node("tools", ToolNode(tools))
-
-# Definir el punto de inicio y las conexiones (edges)
 workflow.set_entry_point("agent")
-workflow.add_conditional_edges("agent", should_continue, {
-    "tools": "tools",
-    END: END
-})
-workflow.add_edge("tools", "agent")  # Luego de ejecutar la tool, vuelve al agente para que responda
+workflow.add_edge("agent", END)
 
-# 6. Compilar el grafo con el checkpointer de Supabase
+# 4. Compilar el grafo con el checkpointer de Supabase
 _agent_app: Optional[CompiledStateGraph] = None
 
 def get_agent_app() -> CompiledStateGraph:

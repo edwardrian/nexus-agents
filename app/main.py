@@ -14,20 +14,22 @@ async def lifespan(app: FastAPI):
     # 1. Iniciar persistencia de LangGraph en Postgres
     await init_db()
 
-    # 2. Iniciar bot de Telegram en segundo plano
-    await telegram_app.initialize()
-    await telegram_app.start()
+    # 2. Iniciar bot de Telegram en segundo plano (solo si hay token)
+    if telegram_app:
+        await telegram_app.initialize()
+        await telegram_app.start()
 
-    # Limpiar webhooks previos y arrancar Long Polling
-    await telegram_app.bot.delete_webhook(drop_pending_updates=True)
-    await telegram_app.updater.start_polling()
+        # Limpiar webhooks previos y arrancar Long Polling
+        await telegram_app.bot.delete_webhook(drop_pending_updates=True)
+        await telegram_app.updater.start_polling()
 
     yield
 
     # 3. Detener bot de Telegram limpiamente
-    await telegram_app.updater.stop()
-    await telegram_app.stop()
-    await telegram_app.shutdown()
+    if telegram_app:
+        await telegram_app.updater.stop()
+        await telegram_app.stop()
+        await telegram_app.shutdown()
 
     # 4. Cerrar conexiones a base de datos
     await close_db()

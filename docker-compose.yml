@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   ollama:
     image: ollama/ollama:latest
@@ -9,6 +7,23 @@ services:
     volumes:
       - ollama_models:/root/.ollama
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Descarga el modelo al levantar el stack (queda guardado en el volumen ollama_models)
+  ollama-pull:
+    image: ollama/ollama:latest
+    container_name: ollama_pull
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint: ["ollama", "pull", "llama3.2"]
+    restart: "no"
 
   api:
     build:
@@ -17,12 +32,18 @@ services:
     container_name: nexus_agents_api
     restart: unless-stopped
     depends_on:
-      - ollama
+      ollama-pull:
+        condition: service_completed_successfully
     ports:
       - "8000:8000" # Ajusta al puerto donde corre tu FastAPI/Uvicorn
     env_file:
       - .env
+    # Desarrollo: monta el código local y recarga uvicorn al guardar cambios
+    volumes:
+      - ./app:/app/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir app
     environment:
+      - WATCHFILES_FORCE_POLLING=true
       # Apunta al nombre del servicio en Compose, no a localhost:
       - OLLAMA_BASE_URL=http://ollama:11434
       - OLLAMA_HOST=http://ollama:11434

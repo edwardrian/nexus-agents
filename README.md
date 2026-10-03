@@ -1,13 +1,14 @@
 # nexus-agents
 
-API de agentes de IA construida con **FastAPI** y **LangGraph**. El agente responde en tiempo real por **SSE** (Server-Sent Events), puede ejecutar herramientas (tools) y recuerda cada conversación guardándola en **Supabase (PostgreSQL)**.
+Asistente de tareas por **Telegram** construido con **FastAPI** y **LangGraph**. Registra las tareas realizadas y pendientes del usuario y recuerda cada conversación guardándola en **Supabase (PostgreSQL)**.
 
 ## Stack
 
 | Pieza | Tecnología |
 |---|---|
 | API | FastAPI + Uvicorn |
-| Agente | LangGraph (`StateGraph` + `ToolNode`) |
+| Bot | python-telegram-bot (long polling) |
+| Agente | LangGraph (`StateGraph` con un nodo) |
 | LLM | Ollama (local), Google Gemini o AWS Bedrock — configurable |
 | Memoria | `AsyncPostgresSaver` sobre Supabase |
 | Contenedores | Docker + Docker Compose |
@@ -20,10 +21,12 @@ app/
 ├── core/config.py        # Variables de entorno (pydantic-settings)
 ├── agent/
 │   ├── state.py          # Estado del agente (lista de mensajes)
-│   └── graph.py          # Grafo: nodo "agent" ⇄ nodo "tools"
-├── api/v1/
-│   ├── router.py         # Endpoints /api/v1/chat/...
-│   └── sse.py            # Convierte los eventos del agente a SSE
+│   └── graph.py          # Grafo: un nodo "agent" que responde
+├── agent/prompts.py      # System prompt del asistente
+├── api/v1/router.py      # Endpoint de historial /api/v1/chat/...
+├── bot/
+│   ├── setup.py          # Crea la app de Telegram (si hay token)
+│   └── handlers.py       # /start y mensajes → agente
 ├── db/checkpoint.py      # Pool de conexiones + checkpointer (memoria)
 └── services/llm_factory.py  # Elige el LLM según LLM_PROVIDER
 ```
@@ -31,21 +34,15 @@ app/
 ## Cómo funciona
 
 ```
-Cliente ──POST /chat/stream──► FastAPI ──► LangGraph
+Telegram ──mensaje──► bot (polling) ──► LangGraph (nodo agent + system prompt)
                                              │
-                     ┌───────────────────────┤
-                     ▼                       ▼
-                 nodo agent  ◄──────►   nodo tools
-                 (LLM decide)          (ejecuta la tool)
-                     │
-                     ▼
-          Checkpointer ──► Supabase (guarda el historial por session_id)
+                                             ▼
+          Checkpointer ──► Supabase (historial por usuario: telegram-<user_id>)
 ```
 
-1. **Al arrancar** (`lifespan`), se abre el pool de conexiones a Supabase y se crean las tablas de checkpoints si no existen. Si la base de datos no responde, la API **no arranca**.
-2. Cada petición trae un `session_id`. El checkpointer carga el historial de esa sesión, así que el agente recuerda lo anterior.
-3. El LLM responde o pide ejecutar una tool. Si pide una tool, se ejecuta y el resultado vuelve al LLM.
-4. Los tokens y eventos se envían al cliente a medida que se generan.
+1. **Al arrancar** (`lifespan`), se abre el pool de conexiones a Supabase, se crean las tablas de checkpoints si no existen y se inicia el bot de Telegram. Si la base de datos no responde, la API **no arranca**.
+2. Cada mensaje de Telegram se envía al agente con `thread_id = telegram-<user_id>`, así el agente recuerda la conversación de cada usuario.
+3. El agente responde según el system prompt (`app/agent/prompts.py`) y la respuesta se envía de vuelta al chat.
 
 ## Endpoints
 
@@ -53,7 +50,6 @@ Cliente ──POST /chat/stream──► FastAPI ──► LangGraph
 |---|---|---|
 | `GET` | `/` | Estado del servicio |
 | `GET` | `/health` | Health check |
-| `POST` | `/api/v1/chat/stream` | Envía un mensaje al agente (respuesta SSE) |
 | `GET` | `/api/v1/chat/sessions/{session_id}/history` | Historial de una sesión |
 
 > Swagger (`/docs`), ReDoc y `/openapi.json` están desactivados en `main.py`.
@@ -61,20 +57,8 @@ Cliente ──POST /chat/stream──► FastAPI ──► LangGraph
 ### Ejemplo
 
 ```bash
-curl -N -X POST http://localhost:8000/api/v1/chat/stream \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "¿Cuál es el estado del servicio auth?", "session_id": "demo-1"}'
+curl http://localhost:8000/api/v1/chat/sessions/telegram-<user_id>/history
 ```
-
-Eventos SSE que puede devolver:
-
-| `type` | Significado |
-|---|---|
-| `token` | Trozo de texto generado por el LLM |
-| `tool_start` | El agente invocó una herramienta |
-| `tool_end` | Resultado de la herramienta |
-| `error` | Ocurrió un error |
-| `done` | Fin del turno |
 
 ## Configuración (`.env`)
 
@@ -91,6 +75,10 @@ DATABASE_URL="postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST
 
 # LLM: ollama | gemini | bedrock
 LLM_PROVIDER=ollama
+
+# Telegram
+TELEGRAM_BOT_TOKEN=<token-de-botfather>
+TELEGRAM_ALLOWED_USER_IDS=<tu-id>   # separados por coma; vacío = cualquiera
 
 # Gemini (si LLM_PROVIDER=gemini)
 GEMINI_API_KEY=
@@ -142,18 +130,3 @@ uvicorn app.main:app --reload
 ```
 
 Con `LLM_PROVIDER=ollama` necesitas Ollama corriendo localmente.
-
-## Agregar herramientas
-
-Las tools se definen en `app/agent/graph.py` con el decorador `@tool` y se añaden a la lista `tools`:
-
-```python
-@tool
-def get_system_status(service_name: str) -> str:
-    """Consulta el estado operativo de un servicio."""
-    return f"Servicio '{service_name}': OPERATIVO"
-
-tools = [get_system_status]
-```
-
-El docstring es importante: es lo que lee el LLM para decidir cuándo usar la herramienta.

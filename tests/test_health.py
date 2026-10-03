@@ -17,7 +17,3 @@ def test_health():
     assert response.status_code == 200
     assert response.json()["status"] == "healthy"
 
-
-def test_chat_stream_requires_prompt():
-    response = client.post("/api/v1/chat/stream", json={"session_id": "test"})
-    assert response.status_code == 422
