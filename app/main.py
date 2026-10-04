@@ -38,9 +38,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version="1.0.0",
-    docs_url=None,       # Desactiva Swagger UI (/docs)
+    description="API de Nexus: consulta del historial de conversaciones del agente.",
+    docs_url="/docs",    # Swagger UI
     redoc_url=None,      # Desactiva ReDoc (/redoc)
-    openapi_url=None,    # Desactiva schema JSON (/openapi.json)
     lifespan=lifespan,
 )
 

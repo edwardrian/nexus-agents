@@ -52,7 +52,7 @@ Telegram ──mensaje──► bot (polling) ──► LangGraph (nodo agent + 
 | `GET` | `/health` | Health check |
 | `GET` | `/api/v1/chat/sessions/{session_id}/history` | Historial de una sesión |
 
-> Swagger (`/docs`), ReDoc y `/openapi.json` están desactivados en `main.py`.
+> Swagger UI disponible en `/docs` (schema en `/openapi.json`). ReDoc está desactivado.
 
 ### Ejemplo
 
