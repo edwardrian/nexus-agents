@@ -9,7 +9,7 @@ Asistente de tareas por **Telegram** construido con **FastAPI** y **LangGraph**.
 | API | FastAPI + Uvicorn |
 | Bot | python-telegram-bot (long polling) |
 | Agente | LangGraph (`StateGraph` con un nodo) |
-| LLM | Ollama (local), Google Gemini o AWS Bedrock — configurable |
+| LLM | Ollama (local) o Google Gemini — configurable |
 | Memoria | `AsyncPostgresSaver` sobre Supabase |
 | Contenedores | Docker + Docker Compose |
 
@@ -73,22 +73,23 @@ DATABASE_NAME="postgres"
 DATABASE_PASSWORD=<password-de-la-base-de-datos>
 DATABASE_URL="postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_NAME}?sslmode=require"
 
-# LLM: ollama | gemini | bedrock
+# LLM: ollama | gemini
 LLM_PROVIDER=ollama
+
+# Ollama (si LLM_PROVIDER=ollama): OLLAMA_MODEL obligatorio, no necesita token
+OLLAMA_BASE_URL=http://localhost:11434   # en docker compose se usa http://ollama:11434
+OLLAMA_MODEL=llama3.2:latest
 
 # Telegram
 TELEGRAM_BOT_TOKEN=<token-de-botfather>
 TELEGRAM_ALLOWED_USER_IDS=<tu-id>   # separados por coma; vacío = cualquiera
 
-# Gemini (si LLM_PROVIDER=gemini)
+# Gemini (si LLM_PROVIDER=gemini): GEMINI_MODEL y GEMINI_API_KEY obligatorios
+GEMINI_MODEL=gemini-2.5-flash
 GEMINI_API_KEY=
-
-# Bedrock (si LLM_PROVIDER=bedrock)
-AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
-BEDROCK_MODEL_ID=
 ```
+
+Según `LLM_PROVIDER`, la API valida al arrancar que estén las variables que ese proveedor necesita (el modelo y, en Gemini, `GEMINI_API_KEY`). Si falta alguna, no arranca y el error dice cuál.
 
 **Notas sobre Supabase:**
 - La conexión directa (`db.<ref>.supabase.co:5432`) solo funciona por IPv6, y Docker Desktop en Mac normalmente no lo soporta. Usa el **Transaction pooler** (puerto `6543`).

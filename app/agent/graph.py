@@ -10,7 +10,7 @@ from app.agent.state import AgentState
 from app.services.llm_factory import get_llm
 from app.db.checkpoint import get_checkpointer
 
-# 1. Inicializar el LLM (Ollama, Gemini o Bedrock según tu factory)
+# 1. Inicializar el LLM (Ollama o Gemini según LLM_PROVIDER)
 llm = get_llm()
 
 # 2. Definir el nodo del agente (el que responde)
