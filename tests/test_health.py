@@ -17,3 +17,9 @@ def test_health():
     assert response.status_code == 200
     assert response.json()["status"] == "healthy"
 
+
+
+def test_swagger_docs():
+    assert client.get("/docs").status_code == 200
+    schema = client.get("/openapi.json").json()
+    assert "/api/v1/chat/sessions/{session_id}/history" in schema["paths"]

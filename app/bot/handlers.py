@@ -36,10 +36,6 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_text = update.message.text
 
-    if not is_allowed(user_id):
-        print(f"[telegram] Usuario no autorizado: {user_id}")
-        return
-
     print(f"[telegram] {user_id}: {user_text}")
     await update.message.chat.send_action(ChatAction.TYPING)
 
@@ -49,9 +45,8 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Un hilo de memoria por usuario de Telegram
             config={"configurable": {"thread_id": f"telegram-{user_id}"}},
         )
-        content = result["messages"][-1].content
-        # Algunos proveedores devuelven el contenido como lista
-        reply = content if isinstance(content, str) else str(content)
+        # .text extrae solo el texto (sirve si el contenido es str o lista de bloques)
+        reply = result["messages"][-1].text
     except Exception:
         traceback.print_exc()
         reply = "Ocurrió un error al procesar tu mensaje. Intenta de nuevo."
