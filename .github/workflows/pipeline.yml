@@ -17,6 +17,7 @@ jobs:
       # Valores de prueba: checkpoint.py exige DATABASE_URL al importarse
       DATABASE_URL: postgresql://test:test@localhost:5432/test
       LLM_PROVIDER: ollama
+      OLLAMA_MODEL: llama3.2:latest
     steps:
       - name: checkout code
         uses: actions/checkout@v7
